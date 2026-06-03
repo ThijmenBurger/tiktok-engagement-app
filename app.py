@@ -8,7 +8,7 @@ import google.generativeai as genai
 
 # Gemini instellen
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+gemini_model = genai.GenerativeModel("gemini-2.0-flash")
 
 # ML Model laden
 with open('model.pkl', 'rb') as f:
