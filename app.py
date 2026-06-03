@@ -4,82 +4,43 @@ import numpy as np
 import cv2
 import tempfile
 import os
+import google.generativeai as genai
 
-# Model laden
+# Gemini instellen
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+
+# ML Model laden
 with open('model.pkl', 'rb') as f:
     model = pickle.load(f)
 
 with open('vectorizer.pkl', 'rb') as f:
     vectorizer = pickle.load(f)
 
-# Verbeterde caption generator
-def genereer_caption_en_hashtags(beschrijving):
-    beschrijving = beschrijving.lower()
+def genereer_caption_met_gemini(beschrijving):
+    prompt = f"""
+Je bent een TikTok expert. Schrijf op basis van de onderstaande videobeschrijving:
+1. Een pakkende Nederlandse TikTok caption (max 1 zin, met emoji's)
+2. 5 relevante hashtags
 
-    templates = {
-        'voetbal': [
-            ("Dit doelpunt ga je niet vergeten ⚽🔥 Wat een goal!", "#voetbal #football #goal #viral #fyp #soccer #skills"),
-            ("POV: je scoort in de laatste minuut 😱⚽", "#voetbal #lastminute #football #fyp #viral #goals"),
-            ("Niemand verwachtte dit doelpunt 🤯⚽🔥", "#voetbal #football #viral #fyp #goals #soccer"),
-        ],
-        'gym': [
-            ("Geen pijn geen winst — vandaag alles gegeven 💪🔥", "#gym #fitness #gains #workout #fyp #viral #bodybuilding"),
-            ("PR gebroken vandaag 🏋️💪 Wie doet mee?", "#gym #PR #fitness #workout #viral #fyp #gains"),
-            ("Dit is waarom ik elke dag train 💪🔥", "#gym #motivation #fitness #fyp #viral #workout"),
-        ],
-        'sport': [
-            ("Alles gegeven op het veld vandaag 🏆💪", "#sport #training #athlete #fyp #viral #fitness"),
-            ("Zo hoort topsport eruit te zien 🔥🏆", "#sport #topsport #athlete #viral #fyp #training"),
-        ],
-        'food': [
-            ("Dit recept moet je echt een keer proberen 😍🍕", "#food #recept #foodie #viral #fyp #lekker #foodtok"),
-            ("Zelfgemaakt en zo ontzettend lekker 🍽️✨", "#food #homemade #cooking #fyp #viral #foodie"),
-            ("Niemand maakt het beter dan thuis 😋🍕", "#food #homecooking #foodtok #fyp #viral #lekker"),
-        ],
-        'dans': [
-            ("Deze moves ga je overal zien 🕺🔥", "#dans #dance #viral #fyp #trending #moves"),
-            ("POV: je leert deze trend in 5 minuten 💃🔥", "#dance #trending #fyp #viral #tiktokdance"),
-        ],
-        'grappig': [
-            ("Ik kan er zelf ook niet mee ophouden met lachen 😂🔥", "#funny #humor #lol #fyp #viral #grappig"),
-            ("Dit had ik echt niet zien aankomen 😂💀", "#funny #viral #fyp #humor #lol #grappig"),
-            ("Waarom overkomt mij dit altijd 😭😂", "#funny #relatable #fyp #viral #humor"),
-        ],
-        'lifestyle': [
-            ("Een dag uit mijn leven — dit verwacht je niet ✨", "#lifestyle #dayinmylife #vlog #fyp #viral #daily"),
-            ("Dit is hoe ik mijn dag begin en het werkt 🌅✨", "#lifestyle #morningroutine #fyp #viral #daily"),
-            ("Kleine dingen maken het verschil 🌟", "#lifestyle #motivation #fyp #viral #daily"),
-        ],
-        'gaming': [
-            ("Deze clip is te gek — niemand kan me stoppen 🎮🔥", "#gaming #gamer #fyp #viral #clips #game"),
-            ("Pro moves only — kijk en leer 🎮💪", "#gaming #pro #fyp #viral #gamer #clips"),
-        ],
-        'muziek': [
-            ("Dit nummer raakt me elke keer opnieuw 🎵❤️", "#muziek #music #fyp #viral #vibes #trending"),
-            ("Kan niet stoppen met dit afspelen 🎶🔥", "#music #fyp #viral #vibes #trending #muziek"),
-        ],
-    }
+Videobeschrijving: {beschrijving}
 
-    # Standaard als niets matcht
-    standaard = [
-        ("Dit wil je echt niet missen 🔥✨", "#fyp #viral #trending #foryou #content"),
-        ("POV: dit is te goed om niet te delen 😍🔥", "#fyp #viral #trending #foryou"),
-    ]
+Geef je antwoord precies in dit formaat:
+CAPTION: [jouw caption hier]
+HASHTAGS: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]
+"""
+    response = gemini_model.generate_content(prompt)
+    tekst = response.text
 
-    # Detecteer categorie
-    gevonden = None
-    for categorie in templates:
-        if categorie in beschrijving:
-            gevonden = categorie
-            break
+    caption = ""
+    hashtags = ""
+    for regel in tekst.split('\n'):
+        if regel.startswith("CAPTION:"):
+            caption = regel.replace("CAPTION:", "").strip()
+        elif regel.startswith("HASHTAGS:"):
+            hashtags = regel.replace("HASHTAGS:", "").strip()
 
-    import random
-    if gevonden:
-        keuze = random.choice(templates[gevonden])
-    else:
-        keuze = random.choice(standaard)
-
-    return keuze[0], keuze[1]
+    return caption, hashtags
 
 def voorspel(caption, hashtags):
     tekst = caption + " " + hashtags
@@ -135,9 +96,9 @@ with tab2:
     st.write("Upload je TikTok video en beschrijf kort wat erin gebeurt.")
 
     video_file = st.file_uploader("🎬 Upload je video", type=['mp4', 'mov', 'avi'])
-    beschrijving = st.text_input("📝 Beschrijf je video kort", placeholder="Bijv: voetbal doelpunt, gym workout, grappig moment")
+    beschrijving = st.text_input("📝 Beschrijf je video", placeholder="Bijv: Denzel Dumfries transfer naar Real Madrid, grappige video van slecht naar goed")
 
-    if video_file and beschrijving:
+    if video_file:
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
             tmp.write(video_file.read())
             tmp_path = tmp.name
@@ -149,16 +110,22 @@ with tab2:
 
         if ret:
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            st.image(frame_rgb, caption="📸 Screenshot uit je video", use_container_width=True)
+            st.image(frame_rgb, caption="📸 Screenshot uit je video", width=400)
 
-        if st.button("🤖 Genereer caption & voorspel", key="btn2"):
-            gegenereerde_caption, gegenereerde_hashtags = genereer_caption_en_hashtags(beschrijving)
+    if video_file and beschrijving:
+        if st.button("🤖 Genereer caption met AI & voorspel", key="btn2"):
+            with st.spinner("Gemini bedenkt een caption..."):
+                try:
+                    gegenereerde_caption, gegenereerde_hashtags = genereer_caption_met_gemini(beschrijving)
 
-            st.subheader("✨ Gegenereerde caption:")
-            st.success(f"**Caption:** {gegenereerde_caption}")
-            st.info(f"**Hashtags:** {gegenereerde_hashtags}")
+                    st.subheader("✨ Door AI gegenereerde caption:")
+                    st.success(f"**Caption:** {gegenereerde_caption}")
+                    st.info(f"**Hashtags:** {gegenereerde_hashtags}")
 
-            voorspelling, kansen, klassen = voorspel(gegenereerde_caption, gegenereerde_hashtags)
+                    voorspelling, kansen, klassen = voorspel(gegenereerde_caption, gegenereerde_hashtags)
 
-            st.subheader("🎯 Engagement voorspelling:")
-            toon_resultaat(voorspelling, kansen, klassen)
+                    st.subheader("🎯 Engagement voorspelling:")
+                    toon_resultaat(voorspelling, kansen, klassen)
+
+                except Exception as e:
+                    st.error(f"Er ging iets mis met Gemini: {e}")
