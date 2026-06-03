@@ -4,7 +4,6 @@ import numpy as np
 import cv2
 import tempfile
 import os
-import random
 
 # Model laden
 with open('model.pkl', 'rb') as f:
@@ -13,83 +12,112 @@ with open('model.pkl', 'rb') as f:
 with open('vectorizer.pkl', 'rb') as f:
     vectorizer = pickle.load(f)
 
-# Caption generator op basis van beschrijving
+# Verbeterde caption generator
 def genereer_caption_en_hashtags(beschrijving):
     beschrijving = beschrijving.lower()
-    
-    # Hashtag bibliotheek
-    hashtag_sets = {
-        'sport': ['#sport', '#fitness', '#training', '#workout', '#athlete', '#fyp', '#viral'],
-        'voetbal': ['#voetbal', '#football', '#soccer', '#goals', '#fyp', '#viral', '#sport'],
-        'gym': ['#gym', '#fitness', '#gains', '#workout', '#bodybuilding', '#fyp', '#viral'],
-        'food': ['#food', '#foodie', '#lekker', '#cooking', '#foodtok', '#fyp', '#viral'],
-        'lifestyle': ['#lifestyle', '#daily', '#vlog', '#dayinmylife', '#fyp', '#viral'],
-        'gaming': ['#gaming', '#gamer', '#game', '#ps5', '#xbox', '#fyp', '#viral'],
-        'muziek': ['#muziek', '#music', '#dance', '#fyp', '#viral', '#trending'],
-        'grappig': ['#funny', '#humor', '#lol', '#grappig', '#fyp', '#viral'],
-    }
-    
-    # Caption templates
-    caption_templates = {
-        'sport': [
-            "Vandaag alles gegeven op het veld 💪",
-            "Geen excuses, alleen resultaten 🏆",
-            "Training never lies 🔥",
-        ],
+
+    templates = {
         'voetbal': [
-            "Het mooiste doelpunt van mijn leven ⚽🔥",
-            "Zo hoort voetbal gespeeld te worden! ⚽",
-            "Skills on point vandaag ⚽💫",
+            ("Dit doelpunt ga je niet vergeten ⚽🔥 Wat een goal!", "#voetbal #football #goal #viral #fyp #soccer #skills"),
+            ("POV: je scoort in de laatste minuut 😱⚽", "#voetbal #lastminute #football #fyp #viral #goals"),
+            ("Niemand verwachtte dit doelpunt 🤯⚽🔥", "#voetbal #football #viral #fyp #goals #soccer"),
         ],
         'gym': [
-            "Geen pijn, geen winst 💪🔥",
-            "Vandaag weer een PR gebroken 🏋️",
-            "De grind stopt nooit 💪",
+            ("Geen pijn geen winst — vandaag alles gegeven 💪🔥", "#gym #fitness #gains #workout #fyp #viral #bodybuilding"),
+            ("PR gebroken vandaag 🏋️💪 Wie doet mee?", "#gym #PR #fitness #workout #viral #fyp #gains"),
+            ("Dit is waarom ik elke dag train 💪🔥", "#gym #motivation #fitness #fyp #viral #workout"),
+        ],
+        'sport': [
+            ("Alles gegeven op het veld vandaag 🏆💪", "#sport #training #athlete #fyp #viral #fitness"),
+            ("Zo hoort topsport eruit te zien 🔥🏆", "#sport #topsport #athlete #viral #fyp #training"),
         ],
         'food': [
-            "Dit moet je echt een keer proberen 😍🍕",
-            "Zelfgemaakt en zo lekker 🍽️✨",
-            "Foodie heaven right here 😋",
+            ("Dit recept moet je echt een keer proberen 😍🍕", "#food #recept #foodie #viral #fyp #lekker #foodtok"),
+            ("Zelfgemaakt en zo ontzettend lekker 🍽️✨", "#food #homemade #cooking #fyp #viral #foodie"),
+            ("Niemand maakt het beter dan thuis 😋🍕", "#food #homecooking #foodtok #fyp #viral #lekker"),
         ],
-        'lifestyle': [
-            "Een dag uit mijn leven ✨",
-            "Dit is hoe ik mijn dag begin 🌅",
-            "Life is good als je dit hebt 😊",
-        ],
-        'gaming': [
-            "Deze clip is te gek 🎮🔥",
-            "Niemand kan me stoppen vandaag 🎮💪",
-            "Pro moves only 🎮✨",
-        ],
-        'muziek': [
-            "Dit nummer raakt elke keer weer 🎵❤️",
-            "Kan niet stoppen met dansen 🎶🔥",
-            "Vibes alleen maar vibes 🎵✨",
+        'dans': [
+            ("Deze moves ga je overal zien 🕺🔥", "#dans #dance #viral #fyp #trending #moves"),
+            ("POV: je leert deze trend in 5 minuten 💃🔥", "#dance #trending #fyp #viral #tiktokdance"),
         ],
         'grappig': [
-            "Ik kan er zelf ook niet om ophouden met lachen 😂",
-            "Dit had ik niet zien aankomen 😂🔥",
-            "Waarom overkomt mij dit altijd 😂",
+            ("Ik kan er zelf ook niet mee ophouden met lachen 😂🔥", "#funny #humor #lol #fyp #viral #grappig"),
+            ("Dit had ik echt niet zien aankomen 😂💀", "#funny #viral #fyp #humor #lol #grappig"),
+            ("Waarom overkomt mij dit altijd 😭😂", "#funny #relatable #fyp #viral #humor"),
+        ],
+        'lifestyle': [
+            ("Een dag uit mijn leven — dit verwacht je niet ✨", "#lifestyle #dayinmylife #vlog #fyp #viral #daily"),
+            ("Dit is hoe ik mijn dag begin en het werkt 🌅✨", "#lifestyle #morningroutine #fyp #viral #daily"),
+            ("Kleine dingen maken het verschil 🌟", "#lifestyle #motivation #fyp #viral #daily"),
+        ],
+        'gaming': [
+            ("Deze clip is te gek — niemand kan me stoppen 🎮🔥", "#gaming #gamer #fyp #viral #clips #game"),
+            ("Pro moves only — kijk en leer 🎮💪", "#gaming #pro #fyp #viral #gamer #clips"),
+        ],
+        'muziek': [
+            ("Dit nummer raakt me elke keer opnieuw 🎵❤️", "#muziek #music #fyp #viral #vibes #trending"),
+            ("Kan niet stoppen met dit afspelen 🎶🔥", "#music #fyp #viral #vibes #trending #muziek"),
         ],
     }
-    
-    # Detecteer onderwerp
-    gekozen_categorie = 'lifestyle'
-    for categorie in hashtag_sets:
+
+    # Standaard als niets matcht
+    standaard = [
+        ("Dit wil je echt niet missen 🔥✨", "#fyp #viral #trending #foryou #content"),
+        ("POV: dit is te goed om niet te delen 😍🔥", "#fyp #viral #trending #foryou"),
+    ]
+
+    # Detecteer categorie
+    gevonden = None
+    for categorie in templates:
         if categorie in beschrijving:
-            gekozen_categorie = categorie
+            gevonden = categorie
             break
-    
-    caption = random.choice(caption_templates[gekozen_categorie])
-    hashtags = ' '.join(random.sample(hashtag_sets[gekozen_categorie], min(5, len(hashtag_sets[gekozen_categorie]))))
-    
-    return caption, hashtags
+
+    import random
+    if gevonden:
+        keuze = random.choice(templates[gevonden])
+    else:
+        keuze = random.choice(standaard)
+
+    return keuze[0], keuze[1]
+
+def voorspel(caption, hashtags):
+    tekst = caption + " " + hashtags
+    vector = vectorizer.transform([tekst])
+    voorspelling = model.predict(vector)[0]
+    kansen = model.predict_proba(vector)[0]
+    klassen = model.classes_
+    return voorspelling, kansen, klassen
+
+def toon_resultaat(voorspelling, kansen, klassen):
+    if voorspelling == "High":
+        st.success("🔥 Hoge engagement verwacht!")
+    elif voorspelling == "Medium":
+        st.info("👍 Gemiddelde engagement verwacht!")
+    else:
+        st.warning("📉 Lage engagement verwacht")
+
+    st.subheader("Kansen per categorie:")
+    for klasse, kans in zip(klassen, kansen):
+        st.progress(float(kans), text=f"{klasse}: {kans:.0%}")
+
+    st.subheader("💡 Tips:")
+    if voorspelling == "High":
+        st.write("✅ Je caption ziet er goed uit! Post hem op een piekmoment.")
+        st.write("✅ Reageer snel op de eerste comments voor extra boost.")
+    elif voorspelling == "Medium":
+        st.write("- Voeg #fyp of #viral toe aan je hashtags")
+        st.write("- Maak je caption iets korter en pakkender")
+        st.write("- Gebruik een emoji aan het begin")
+    else:
+        st.write("- Herformuleer je caption — maak het persoonlijker")
+        st.write("- Gebruik trending hashtags zoals #fyp #viral #foryou")
+        st.write("- Stel een vraag in je caption voor meer reacties")
 
 # App design
 st.title("🎵 TikTok Engagement Voorspeller")
 st.subheader("Upload een video of vul je caption in en ontdek hoe goed je post het doet!")
 
-# Tabs
 tab1, tab2 = st.tabs(["📝 Caption invoeren", "🎬 Video uploaden"])
 
 with tab1:
@@ -100,74 +128,37 @@ with tab1:
         if caption == "" and hashtags == "":
             st.warning("Vul eerst een caption of hashtags in!")
         else:
-            tekst = caption + " " + hashtags
-            vector = vectorizer.transform([tekst])
-            voorspelling = model.predict(vector)[0]
-            kansen = model.predict_proba(vector)[0]
-            klassen = model.classes_
-
-            if voorspelling == "High":
-                st.success("🔥 Hoge engagement verwacht!")
-            elif voorspelling == "Medium":
-                st.info("👍 Gemiddelde engagement verwacht!")
-            else:
-                st.warning("📉 Lage engagement verwacht")
-
-            st.subheader("Kansen per categorie:")
-            for klasse, kans in zip(klassen, kansen):
-                st.progress(float(kans), text=f"{klasse}: {kans:.0%}")
-
-            st.subheader("💡 Tips:")
-            if voorspelling != "High":
-                st.write("- Voeg meer trending hashtags toe zoals #viral of #fyp")
-                st.write("- Maak je caption korter en pakkender")
-                st.write("- Gebruik een emoji aan het begin")
+            voorspelling, kansen, klassen = voorspel(caption, hashtags)
+            toon_resultaat(voorspelling, kansen, klassen)
 
 with tab2:
     st.write("Upload je TikTok video en beschrijf kort wat erin gebeurt.")
-    
+
     video_file = st.file_uploader("🎬 Upload je video", type=['mp4', 'mov', 'avi'])
     beschrijving = st.text_input("📝 Beschrijf je video kort", placeholder="Bijv: voetbal doelpunt, gym workout, grappig moment")
-    
+
     if video_file and beschrijving:
-        # Video opslaan en frame extraheren
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
             tmp.write(video_file.read())
             tmp_path = tmp.name
-        
-        # Frame uit video halen
+
         cap = cv2.VideoCapture(tmp_path)
         ret, frame = cap.read()
         cap.release()
         os.unlink(tmp_path)
-        
+
         if ret:
-            # Frame tonen
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             st.image(frame_rgb, caption="📸 Screenshot uit je video", use_container_width=True)
-        
+
         if st.button("🤖 Genereer caption & voorspel", key="btn2"):
-            # Caption genereren
             gegenereerde_caption, gegenereerde_hashtags = genereer_caption_en_hashtags(beschrijving)
-            
+
             st.subheader("✨ Gegenereerde caption:")
-            st.info(f"**Caption:** {gegenereerde_caption}")
+            st.success(f"**Caption:** {gegenereerde_caption}")
             st.info(f"**Hashtags:** {gegenereerde_hashtags}")
-            
-            # Engagement voorspellen
-            tekst = gegenereerde_caption + " " + gegenereerde_hashtags
-            vector = vectorizer.transform([tekst])
-            voorspelling = model.predict(vector)[0]
-            kansen = model.predict_proba(vector)[0]
-            klassen = model.classes_
-            
+
+            voorspelling, kansen, klassen = voorspel(gegenereerde_caption, gegenereerde_hashtags)
+
             st.subheader("🎯 Engagement voorspelling:")
-            if voorspelling == "High":
-                st.success("🔥 Hoge engagement verwacht!")
-            elif voorspelling == "Medium":
-                st.info("👍 Gemiddelde engagement verwacht!")
-            else:
-                st.warning("📉 Lage engagement verwacht")
-            
-            for klasse, kans in zip(klassen, kansen):
-                st.progress(float(kans), text=f"{klasse}: {kans:.0%}")
+            toon_resultaat(voorspelling, kansen, klassen)
