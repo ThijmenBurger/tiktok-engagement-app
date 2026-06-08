@@ -1,14 +1,12 @@
 import streamlit as st
 import pickle
-import numpy as np
 import cv2
 import tempfile
 import os
-import google.generativeai as genai
+from groq import Groq
 
-# Gemini instellen
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+# Groq instellen
+client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 # ML Model laden
 with open('model.pkl', 'rb') as f:
@@ -17,9 +15,12 @@ with open('model.pkl', 'rb') as f:
 with open('vectorizer.pkl', 'rb') as f:
     vectorizer = pickle.load(f)
 
-def genereer_caption_met_gemini(beschrijving):
-    prompt = f"""
-Je bent een TikTok expert. Schrijf op basis van de onderstaande videobeschrijving:
+def genereer_caption_met_groq(beschrijving):
+    response = client.chat.completions.create(
+        model="llama3-8b-8192",
+        messages=[{
+            "role": "user",
+            "content": f"""Je bent een TikTok expert. Schrijf op basis van deze videobeschrijving:
 1. Een pakkende Nederlandse TikTok caption (max 1 zin, met emoji's)
 2. 5 relevante hashtags
 
@@ -27,11 +28,10 @@ Videobeschrijving: {beschrijving}
 
 Geef je antwoord precies in dit formaat:
 CAPTION: [jouw caption hier]
-HASHTAGS: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]
-"""
-    response = gemini_model.generate_content(prompt)
-    tekst = response.text
-
+HASHTAGS: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]"""
+        }]
+    )
+    tekst = response.choices[0].message.content
     caption = ""
     hashtags = ""
     for regel in tekst.split('\n'):
@@ -39,7 +39,6 @@ HASHTAGS: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]
             caption = regel.replace("CAPTION:", "").strip()
         elif regel.startswith("HASHTAGS:"):
             hashtags = regel.replace("HASHTAGS:", "").strip()
-
     return caption, hashtags
 
 def voorspel(caption, hashtags):
@@ -75,7 +74,6 @@ def toon_resultaat(voorspelling, kansen, klassen):
         st.write("- Gebruik trending hashtags zoals #fyp #viral #foryou")
         st.write("- Stel een vraag in je caption voor meer reacties")
 
-# App design
 st.title("🎵 TikTok Engagement Voorspeller")
 st.subheader("Upload een video of vul je caption in en ontdek hoe goed je post het doet!")
 
@@ -94,7 +92,6 @@ with tab1:
 
 with tab2:
     st.write("Upload je TikTok video en beschrijf kort wat erin gebeurt.")
-
     video_file = st.file_uploader("🎬 Upload je video", type=['mp4', 'mov', 'avi'])
     beschrijving = st.text_input("📝 Beschrijf je video", placeholder="Bijv: Denzel Dumfries transfer naar Real Madrid, grappige video van slecht naar goed")
 
@@ -102,30 +99,24 @@ with tab2:
         with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
             tmp.write(video_file.read())
             tmp_path = tmp.name
-
         cap = cv2.VideoCapture(tmp_path)
         ret, frame = cap.read()
         cap.release()
         os.unlink(tmp_path)
-
         if ret:
             frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
             st.image(frame_rgb, caption="📸 Screenshot uit je video", width=400)
 
     if video_file and beschrijving:
         if st.button("🤖 Genereer caption met AI & voorspel", key="btn2"):
-            with st.spinner("Gemini bedenkt een caption..."):
+            with st.spinner("AI bedenkt een caption..."):
                 try:
-                    gegenereerde_caption, gegenereerde_hashtags = genereer_caption_met_gemini(beschrijving)
-
+                    gegenereerde_caption, gegenereerde_hashtags = genereer_caption_met_groq(beschrijving)
                     st.subheader("✨ Door AI gegenereerde caption:")
                     st.success(f"**Caption:** {gegenereerde_caption}")
                     st.info(f"**Hashtags:** {gegenereerde_hashtags}")
-
                     voorspelling, kansen, klassen = voorspel(gegenereerde_caption, gegenereerde_hashtags)
-
                     st.subheader("🎯 Engagement voorspelling:")
                     toon_resultaat(voorspelling, kansen, klassen)
-
                 except Exception as e:
-                    st.error(f"Er ging iets mis met Gemini: {e}")
+                    st.error(f"Er ging iets mis: {e}")
