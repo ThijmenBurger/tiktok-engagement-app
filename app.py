@@ -17,7 +17,7 @@ with open('vectorizer.pkl', 'rb') as f:
 
 def genereer_caption_met_groq(beschrijving):
     response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.3-70b-versatile",
         messages=[{
             "role": "user",
             "content": f"""Je bent een TikTok expert. Schrijf op basis van deze videobeschrijving:
