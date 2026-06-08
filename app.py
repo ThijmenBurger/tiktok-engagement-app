@@ -16,34 +16,50 @@ with open('vectorizer.pkl', 'rb') as f:
     vectorizer = pickle.load(f)
 
 
-def genereer_caption_met_groq(beschrijving):
+def genereer_caption_variaties(beschrijving):
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{
             "role": "user",
-            "content": f"""Je bent een TikTok expert. Schrijf op basis van deze videobeschrijving:
-1. Een pakkende Nederlandse TikTok caption (max 1 zin, met emoji's)
-2. 5 relevante hashtags
+            "content": f"""Je bent een TikTok expert. Schrijf 3 verschillende pakkende Nederlandse TikTok captions op basis van deze videobeschrijving. Elke caption heeft een andere stijl: één grappig, één serieus/inspirerend, één met een vraag.
+Geef ook bij elke caption 5 relevante hashtags.
 
 Videobeschrijving: {beschrijving}
 
 Geef je antwoord precies in dit formaat:
-CAPTION: [jouw caption hier]
-HASHTAGS: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]"""
+CAPTION1: [grappige caption]
+HASHTAGS1: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]
+CAPTION2: [serieuze/inspirerende caption]
+HASHTAGS2: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]
+CAPTION3: [caption met een vraag]
+HASHTAGS3: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]"""
         }]
     )
     tekst = response.choices[0].message.content
-    caption = ""
-    hashtags = ""
+    variaties = []
+    current_caption = ""
+    current_hashtags = ""
     for regel in tekst.split('\n'):
-        if regel.startswith("CAPTION:"):
-            caption = regel.replace("CAPTION:", "").strip()
-        elif regel.startswith("HASHTAGS:"):
-            hashtags = regel.replace("HASHTAGS:", "").strip()
-    return caption, hashtags
+        regel = regel.strip()
+        if regel.startswith("CAPTION1:"):
+            current_caption = regel.replace("CAPTION1:", "").strip()
+        elif regel.startswith("HASHTAGS1:"):
+            current_hashtags = regel.replace("HASHTAGS1:", "").strip()
+            variaties.append(("😄 Grappig", current_caption, current_hashtags))
+        elif regel.startswith("CAPTION2:"):
+            current_caption = regel.replace("CAPTION2:", "").strip()
+        elif regel.startswith("HASHTAGS2:"):
+            current_hashtags = regel.replace("HASHTAGS2:", "").strip()
+            variaties.append(("💪 Inspirerend", current_caption, current_hashtags))
+        elif regel.startswith("CAPTION3:"):
+            current_caption = regel.replace("CAPTION3:", "").strip()
+        elif regel.startswith("HASHTAGS3:"):
+            current_hashtags = regel.replace("HASHTAGS3:", "").strip()
+            variaties.append(("❓ Vraag", current_caption, current_hashtags))
+    return variaties
 
 
-def analyseer_video(beschrijving, voorspelling):
+def analyseer_video(beschrijving, score_label):
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{
@@ -51,10 +67,10 @@ def analyseer_video(beschrijving, voorspelling):
             "content": f"""Je bent een TikTok expert. Analyseer deze video en geef advies in het Nederlands.
 
 Videobeschrijving: {beschrijving}
-Engagement voorspelling: {voorspelling}
+Engagement voorspelling: {score_label}
 
 Geef je antwoord in dit exacte formaat:
-WAAROM: [2 zinnen waarom deze video {voorspelling} engagement krijgt]
+WAAROM: [2 zinnen waarom deze video {score_label} engagement krijgt]
 STERK: [wat werkt goed aan deze video]
 VERBETER: [wat kan beter aan de video zelf]
 ALTERNATIEF: [een concreet idee voor een betere video over hetzelfde onderwerp]"""
@@ -63,7 +79,7 @@ ALTERNATIEF: [een concreet idee voor een betere video over hetzelfde onderwerp]"
     return response.choices[0].message.content
 
 
-def uitleg_caption(caption, hashtags, voorspelling):
+def uitleg_caption(caption, hashtags, score_label):
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{
@@ -72,7 +88,7 @@ def uitleg_caption(caption, hashtags, voorspelling):
 
 Caption: {caption}
 Hashtags: {hashtags}
-Voorspelling: {voorspelling}
+Voorspelling: {score_label}
 
 Formaat:
 PUNT1: [uitleg punt 1]
@@ -90,6 +106,25 @@ def voorspel(caption, hashtags):
     kansen = model.predict_proba(vector)[0]
     klassen = model.classes_
     return pred, kansen, klassen
+
+
+def bereken_score(pred, kansen, klassen):
+    score_map = {"Low": 0, "Medium": 50, "High": 100}
+    base = score_map.get(pred, 50)
+    kans_dict = dict(zip(klassen, kansen))
+    high_kans = kans_dict.get("High", 0)
+    med_kans = kans_dict.get("Medium", 0)
+    score = int(high_kans * 100 * 0.6 + med_kans * 100 * 0.3 + base * 0.1)
+    return min(max(score, 5), 99)
+
+
+def kleur_voor_score(score):
+    if score >= 70:
+        return "#22c55e"
+    elif score >= 40:
+        return "#f59e0b"
+    else:
+        return "#ef4444"
 
 
 POSTING_TIJDEN = {
@@ -112,17 +147,32 @@ def get_posting_tijden(tekst):
     return POSTING_TIJDEN["algemeen"]
 
 
-def toon_resultaat(pred, kansen, klassen, caption="", hashtags="", toon_uitleg=True):
-    if pred == "High":
-        st.success("🔥 Hoge engagement verwacht!")
-    elif pred == "Medium":
-        st.info("👍 Gemiddelde engagement verwacht!")
-    else:
-        st.warning("📉 Lage engagement verwacht")
+def toon_score_balk(score):
+    kleur = kleur_voor_score(score)
+    label = "🔥 Hoog" if score >= 70 else ("👍 Gemiddeld" if score >= 40 else "📉 Laag")
+    st.markdown(f"""
+    <div style='background:#1e1e2e; border-radius:16px; padding:20px; margin:10px 0;'>
+        <div style='display:flex; justify-content:space-between; margin-bottom:8px;'>
+            <span style='color:white; font-size:16px; font-weight:bold;'>Engagement Score</span>
+            <span style='color:{kleur}; font-size:24px; font-weight:bold;'>{score}/100</span>
+        </div>
+        <div style='background:#2e2e3e; border-radius:999px; height:16px;'>
+            <div style='background:{kleur}; width:{score}%; height:16px; border-radius:999px; transition:width 0.5s;'></div>
+        </div>
+        <div style='text-align:right; margin-top:6px;'>
+            <span style='color:{kleur}; font-size:14px;'>{label}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.subheader("Kansen per categorie:")
-    for klasse, kans in zip(klassen, kansen):
-        st.progress(float(kans), text=f"{klasse}: {kans:.0%}")
+
+def toon_resultaat(pred, kansen, klassen, caption="", hashtags="", toon_uitleg=True):
+    score = bereken_score(pred, kansen, klassen)
+    toon_score_balk(score)
+
+    with st.expander("📊 Kansen per categorie"):
+        for klasse, kans in zip(klassen, kansen):
+            st.progress(float(kans), text=f"{klasse}: {kans:.0%}")
 
     if toon_uitleg and caption:
         with st.expander("🔍 Waarom scoort deze caption zo?"):
@@ -154,7 +204,17 @@ def toon_resultaat(pred, kansen, klassen, caption="", hashtags="", toon_uitleg=T
         st.write("- Stel een vraag in je caption voor meer reacties")
 
 
-# App design
+# Styling
+st.markdown("""
+<style>
+    .main { background-color: #0f0f17; }
+    h1 { color: #fe2c55 !important; }
+    h2, h3 { color: #ffffff !important; }
+    .stTabs [data-baseweb="tab"] { color: white; }
+    .stTabs [aria-selected="true"] { border-bottom: 3px solid #fe2c55 !important; }
+</style>
+""", unsafe_allow_html=True)
+
 st.title("🎵 TikTok Engagement Voorspeller")
 st.subheader("Upload een video of vul je caption in en ontdek hoe goed je post het doet!")
 
@@ -189,24 +249,39 @@ with tab2:
             st.image(frame_rgb, caption="📸 Screenshot uit je video", width=400)
 
     if video_file and beschrijving:
-        if st.button("🤖 Genereer caption met AI & voorspel", key="btn2"):
-            with st.spinner("AI analyseert je video..."):
+        if st.button("🤖 Genereer captions met AI & voorspel", key="btn2"):
+            with st.spinner("AI bedenkt 3 caption variaties..."):
                 try:
-                    gegenereerde_caption, gegenereerde_hashtags = genereer_caption_met_groq(beschrijving)
+                    variaties = genereer_caption_variaties(beschrijving)
 
-                    st.subheader("✨ Door AI gegenereerde caption:")
-                    st.success(f"**Caption:** {gegenereerde_caption}")
-                    st.info(f"**Hashtags:** {gegenereerde_hashtags}")
+                    st.subheader("✨ 3 Caption variaties:")
+                    beste_score = 0
+                    beste_idx = 0
 
-                    pred, kansen, klassen = voorspel(gegenereerde_caption, gegenereerde_hashtags)
+                    for i, (stijl, cap_tekst, hash_tekst) in enumerate(variaties):
+                        pred, kansen, klassen = voorspel(cap_tekst, hash_tekst)
+                        score = bereken_score(pred, kansen, klassen)
+                        if score > beste_score:
+                            beste_score = score
+                            beste_idx = i
 
-                    st.subheader("🎯 Engagement voorspelling:")
-                    toon_resultaat(pred, kansen, klassen, gegenereerde_caption, gegenereerde_hashtags)
+                    for i, (stijl, cap_tekst, hash_tekst) in enumerate(variaties):
+                        pred, kansen, klassen = voorspel(cap_tekst, hash_tekst)
+                        score = bereken_score(pred, kansen, klassen)
+                        kleur = kleur_voor_score(score)
+                        winnaar = " 🏆 Beste optie!" if i == beste_idx else ""
+                        with st.expander(f"{stijl}{winnaar} — Score: {score}/100"):
+                            st.success(f"**Caption:** {cap_tekst}")
+                            st.info(f"**Hashtags:** {hash_tekst}")
+                            toon_score_balk(score)
+
+                    best_stijl, best_cap, best_hash = variaties[beste_idx]
+                    best_pred, best_kansen, best_klassen = voorspel(best_cap, best_hash)
 
                     st.divider()
                     st.subheader("🎬 Video analyse & aanbevelingen")
                     with st.spinner("AI analyseert je video inhoud..."):
-                        analyse = analyseer_video(beschrijving, pred)
+                        analyse = analyseer_video(beschrijving, best_pred)
                         for regel in analyse.split('\n'):
                             if regel.startswith("WAAROM:"):
                                 st.info(f"**📊 Waarom deze score:** {regel.replace('WAAROM:', '').strip()}")
@@ -216,6 +291,13 @@ with tab2:
                                 st.warning(f"**🔧 Wat kan beter:** {regel.replace('VERBETER:', '').strip()}")
                             elif regel.startswith("ALTERNATIEF:"):
                                 st.info(f"**💡 Probeer dit:** {regel.replace('ALTERNATIEF:', '').strip()}")
+
+                    tijden = get_posting_tijden(beschrijving)
+                    with st.expander("⏰ Beste posting tijden"):
+                        st.write(f"💡 {tijden['uitleg']}")
+                        cols = st.columns(3)
+                        for i, tijd in enumerate(tijden['beste']):
+                            cols[i].metric("Beste tijd", tijd)
 
                 except Exception as e:
                     st.error(f"Er ging iets mis: {e}")
@@ -238,24 +320,24 @@ with tab3:
         if caption_a and caption_b:
             v_a, k_a, kl_a = voorspel(caption_a, hashtags_a)
             v_b, k_b, kl_b = voorspel(caption_b, hashtags_b)
-
-            score_map = {"High": 3, "Medium": 2, "Low": 1}
-            score_a = score_map[v_a]
-            score_b = score_map[v_b]
+            score_a = bereken_score(v_a, k_a, kl_a)
+            score_b = bereken_score(v_b, k_b, kl_b)
 
             col1, col2 = st.columns(2)
             with col1:
                 st.subheader("Resultaat A")
+                toon_score_balk(score_a)
                 toon_resultaat(v_a, k_a, kl_a, caption_a, hashtags_a, toon_uitleg=False)
             with col2:
                 st.subheader("Resultaat B")
+                toon_score_balk(score_b)
                 toon_resultaat(v_b, k_b, kl_b, caption_b, hashtags_b, toon_uitleg=False)
 
             st.divider()
             if score_a > score_b:
-                st.success("🏆 Caption A wint!")
+                st.success(f"🏆 Caption A wint met {score_a} vs {score_b} punten!")
             elif score_b > score_a:
-                st.success("🏆 Caption B wint!")
+                st.success(f"🏆 Caption B wint met {score_b} vs {score_a} punten!")
             else:
                 st.info("🤝 Het is gelijkspel!")
         else:
