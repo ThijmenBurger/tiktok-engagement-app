@@ -15,6 +15,7 @@ with open('model.pkl', 'rb') as f:
 with open('vectorizer.pkl', 'rb') as f:
     vectorizer = pickle.load(f)
 
+
 def genereer_caption_met_groq(beschrijving):
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -41,6 +42,7 @@ HASHTAGS: [#hashtag1 #hashtag2 #hashtag3 #hashtag4 #hashtag5]"""
             hashtags = regel.replace("HASHTAGS:", "").strip()
     return caption, hashtags
 
+
 def analyseer_video(beschrijving, voorspelling):
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
@@ -59,6 +61,7 @@ ALTERNATIEF: [een concreet idee voor een betere video over hetzelfde onderwerp]"
         }]
     )
     return response.choices[0].message.content
+
 
 def uitleg_caption(caption, hashtags, voorspelling):
     response = client.chat.completions.create(
@@ -79,6 +82,16 @@ PUNT3: [uitleg punt 3]"""
     )
     return response.choices[0].message.content
 
+
+def voorspel(caption, hashtags):
+    tekst = caption + " " + hashtags
+    vector = vectorizer.transform([tekst])
+    pred = model.predict(vector)[0]
+    kansen = model.predict_proba(vector)[0]
+    klassen = model.classes_
+    return pred, kansen, klassen
+
+
 POSTING_TIJDEN = {
     "sport": {"beste": ["18:00", "20:00", "21:00"], "uitleg": "Na het werk/school kijken mensen sportcontent"},
     "voetbal": {"beste": ["18:00", "20:00", "22:00"], "uitleg": "Avonden en na wedstrijden zijn piektijden"},
@@ -90,6 +103,7 @@ POSTING_TIJDEN = {
     "algemeen": {"beste": ["07:00", "12:00", "19:00"], "uitleg": "Ochtend, lunch en avond zijn algemene piektijden"},
 }
 
+
 def get_posting_tijden(tekst):
     tekst = tekst.lower()
     for categorie in POSTING_TIJDEN:
@@ -97,10 +111,11 @@ def get_posting_tijden(tekst):
             return POSTING_TIJDEN[categorie]
     return POSTING_TIJDEN["algemeen"]
 
-def toon_resultaat(voorspelling, kansen, klassen, caption="", hashtags="", toon_uitleg=True):
-    if voorspelling == "High":
+
+def toon_resultaat(pred, kansen, klassen, caption="", hashtags="", toon_uitleg=True):
+    if pred == "High":
         st.success("🔥 Hoge engagement verwacht!")
-    elif voorspelling == "Medium":
+    elif pred == "Medium":
         st.info("👍 Gemiddelde engagement verwacht!")
     else:
         st.warning("📉 Lage engagement verwacht")
@@ -112,7 +127,7 @@ def toon_resultaat(voorspelling, kansen, klassen, caption="", hashtags="", toon_
     if toon_uitleg and caption:
         with st.expander("🔍 Waarom scoort deze caption zo?"):
             with st.spinner("AI analyseert je caption..."):
-                uitleg = uitleg_caption(caption, hashtags, voorspelling)
+                uitleg = uitleg_caption(caption, hashtags, pred)
                 for regel in uitleg.split('\n'):
                     if regel.startswith("PUNT"):
                         inhoud = regel.split(":", 1)[-1].strip()
@@ -126,10 +141,10 @@ def toon_resultaat(voorspelling, kansen, klassen, caption="", hashtags="", toon_
             cols[i].metric("Beste tijd", tijd)
 
     st.subheader("💡 Tips:")
-    if voorspelling == "High":
+    if pred == "High":
         st.write("✅ Je caption ziet er goed uit! Post hem op een piekmoment.")
         st.write("✅ Reageer snel op de eerste comments voor extra boost.")
-    elif voorspelling == "Medium":
+    elif pred == "Medium":
         st.write("- Voeg #fyp of #viral toe aan je hashtags")
         st.write("- Maak je caption iets korter en pakkender")
         st.write("- Gebruik een emoji aan het begin")
@@ -137,6 +152,7 @@ def toon_resultaat(voorspelling, kansen, klassen, caption="", hashtags="", toon_
         st.write("- Herformuleer je caption — maak het persoonlijker")
         st.write("- Gebruik trending hashtags zoals #fyp #viral #foryou")
         st.write("- Stel een vraag in je caption voor meer reacties")
+
 
 # App design
 st.title("🎵 TikTok Engagement Voorspeller")
@@ -152,8 +168,8 @@ with tab1:
         if caption == "" and hashtags == "":
             st.warning("Vul eerst een caption of hashtags in!")
         else:
-            voorspelling, kansen, klassen = voorspel(caption, hashtags)
-            toon_resultaat(voorspelling, kansen, klassen, caption, hashtags)
+            pred, kansen, klassen = voorspel(caption, hashtags)
+            toon_resultaat(pred, kansen, klassen, caption, hashtags)
 
 with tab2:
     st.write("Upload je TikTok video en beschrijf kort wat erin gebeurt.")
@@ -182,15 +198,15 @@ with tab2:
                     st.success(f"**Caption:** {gegenereerde_caption}")
                     st.info(f"**Hashtags:** {gegenereerde_hashtags}")
 
-                    voorspelling, kansen, klassen = voorspel(gegenereerde_caption, gegenereerde_hashtags)
+                    pred, kansen, klassen = voorspel(gegenereerde_caption, gegenereerde_hashtags)
 
                     st.subheader("🎯 Engagement voorspelling:")
-                    toon_resultaat(voorspelling, kansen, klassen, gegenereerde_caption, gegenereerde_hashtags)
+                    toon_resultaat(pred, kansen, klassen, gegenereerde_caption, gegenereerde_hashtags)
 
                     st.divider()
                     st.subheader("🎬 Video analyse & aanbevelingen")
                     with st.spinner("AI analyseert je video inhoud..."):
-                        analyse = analyseer_video(beschrijving, voorspelling)
+                        analyse = analyseer_video(beschrijving, pred)
                         for regel in analyse.split('\n'):
                             if regel.startswith("WAAROM:"):
                                 st.info(f"**📊 Waarom deze score:** {regel.replace('WAAROM:', '').strip()}")
@@ -199,7 +215,7 @@ with tab2:
                             elif regel.startswith("VERBETER:"):
                                 st.warning(f"**🔧 Wat kan beter:** {regel.replace('VERBETER:', '').strip()}")
                             elif regel.startswith("ALTERNATIEF:"):
-                                st.info(f"**💡 Probeer dit in plaats daarvan:** {regel.replace('ALTERNATIEF:', '').strip()}")
+                                st.info(f"**💡 Probeer dit:** {regel.replace('ALTERNATIEF:', '').strip()}")
 
                 except Exception as e:
                     st.error(f"Er ging iets mis: {e}")
