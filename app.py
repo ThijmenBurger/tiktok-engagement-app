@@ -235,7 +235,7 @@ st.markdown("""
         <polyline points="140,55 152,68 172,40" fill="none" stroke="#25f4ee" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <div>
-        <div style='font-size:32px; font-weight:900; color:white; line-height:1;'>Viral<span style="color:#fe2c55;">Check</span> <span style="color:#25f4ee;">AI</span></div>
+        <div style='font-size:32px; font-weight:900; line-height:1;'><span style="color:#25f4ee;">Viral</span><span style="color:#fe2c55;">Check</span> <span style="color:white;">AI</span></div>
         <div style='font-size:13px; color:#888; letter-spacing:3px; margin-top:4px;'>ENGAGEMENT PREDICTOR</div>
     </div>
 </div>
