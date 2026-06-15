@@ -164,9 +164,9 @@ def toon_score_balk(score):
     kleur = kleur_voor_score(score)
     label = "🔥 Hoog" if score >= 70 else ("👍 Gemiddeld" if score >= 40 else "📉 Laag")
     st.markdown(f"""
-    <div style='background:#1e1e2e; border-radius:16px; padding:20px; margin:10px 0;'>
+    <div style='background:#1e1e2e; border-radius:16px; padding:20px; margin:10px 0; border:1px solid #2e2e3e;'>
         <div style='display:flex; justify-content:space-between; margin-bottom:8px;'>
-            <span style='color:white; font-size:16px; font-weight:bold;'>Engagement Score</span>
+            <span style='color:#ffffff; font-size:16px; font-weight:bold;'>Engagement Score</span>
             <span style='color:{kleur}; font-size:24px; font-weight:bold;'>{score}/100</span>
         </div>
         <div style='background:#2e2e3e; border-radius:999px; height:16px;'>
@@ -204,27 +204,58 @@ def toon_resultaat(pred, kansen, klassen, caption="", hashtags="", toon_uitleg=T
             cols[i].metric("Beste tijd", tijd)
 
     if score >= 70:
-        st.write("✅ Je caption ziet er goed uit! Post hem op een piekmoment.")
-        st.write("✅ Reageer snel op de eerste comments voor extra boost.")
+        st.success("✅ Je caption ziet er goed uit! Post hem op een piekmoment.")
+        st.success("✅ Reageer snel op de eerste comments voor extra boost.")
     elif score >= 40:
-        st.write("- Voeg #fyp of #viral toe aan je hashtags")
-        st.write("- Maak je caption iets korter en pakkender")
-        st.write("- Gebruik een emoji aan het begin")
+        st.warning("- Voeg #fyp of #viral toe aan je hashtags")
+        st.warning("- Maak je caption iets korter en pakkender")
+        st.warning("- Gebruik een emoji aan het begin")
     else:
-        st.write("- Herformuleer je caption — maak het persoonlijker")
-        st.write("- Gebruik trending hashtags zoals #fyp #viral #foryou")
-        st.write("- Stel een vraag in je caption voor meer reacties")
+        st.error("- Herformuleer je caption — maak het persoonlijker")
+        st.error("- Gebruik trending hashtags zoals #fyp #viral #foryou")
+        st.error("- Stel een vraag in je caption voor meer reacties")
 
 
-# Styling + Logo
+# ===== STYLING =====
 st.markdown("""
 <style>
-    .main { background-color: #0f0f17; }
-    .stTabs [data-baseweb="tab"] { color: white; }
-    .stTabs [aria-selected="true"] { border-bottom: 3px solid #fe2c55 !important; }
+    .stApp { background-color: #0f0f17; color: #ffffff; }
+    .stApp * { color: #ffffff; }
+    .stTextInput > div > div > input {
+        background-color: #1e1e2e !important;
+        color: #ffffff !important;
+        border: 1px solid #3e3e4e !important;
+        border-radius: 8px !important;
+    }
+    .stTextInput > div > div > input::placeholder { color: #888888 !important; }
+    .stSelectbox > div > div {
+        background-color: #1e1e2e !important;
+        color: #ffffff !important;
+        border: 1px solid #3e3e4e !important;
+    }
+    .stButton > button {
+        background-color: #fe2c55 !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+    }
+    .stButton > button:hover { background-color: #d41f3f !important; }
+    .stTabs [data-baseweb="tab-list"] { background-color: #1e1e2e; border-radius: 8px; }
+    .stTabs [data-baseweb="tab"] { color: #888888 !important; }
+    .stTabs [aria-selected="true"] { color: #ffffff !important; border-bottom: 3px solid #fe2c55 !important; }
+    .stExpander { background-color: #1e1e2e !important; border: 1px solid #2e2e3e !important; border-radius: 8px !important; }
+    .stSidebar { background-color: #1a1a2e !important; }
+    .stSidebar * { color: #ffffff !important; }
+    div[data-testid="metric-container"] { background-color: #1e1e2e; border-radius: 8px; padding: 10px; }
+    .stSuccess { background-color: #1a2e1a !important; border-left: 4px solid #22c55e !important; }
+    .stWarning { background-color: #2e2a1a !important; border-left: 4px solid #f59e0b !important; }
+    .stError { background-color: #2e1a1a !important; border-left: 4px solid #ef4444 !important; }
+    .stInfo { background-color: #1a1e2e !important; border-left: 4px solid #25f4ee !important; }
 </style>
 """, unsafe_allow_html=True)
 
+# ===== LOGO =====
 st.markdown("""
 <div style='display:flex; align-items:center; gap:20px; padding:10px 0 20px 0;'>
     <svg width="70" height="70" viewBox="0 0 200 200">
@@ -235,161 +266,198 @@ st.markdown("""
         <polyline points="140,55 152,68 172,40" fill="none" stroke="#25f4ee" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <div>
-        <div style='font-size:32px; font-weight:900; line-height:1;'><span style="color:#25f4ee;">Viral</span><span style="color:#fe2c55;">Check</span> <span style="color:white;">AI</span></div>
-        <div style='font-size:13px; color:#888; letter-spacing:3px; margin-top:4px;'>ENGAGEMENT PREDICTOR</div>
+        <div style='font-size:36px; font-weight:900; line-height:1;'>
+            <span style="color:#25f4ee;">Viral</span><span style="color:#fe2c55;">Check</span> <span style="color:#ffffff;">AI</span>
+        </div>
+        <div style='font-size:13px; color:#888888; letter-spacing:3px; margin-top:4px;'>ENGAGEMENT PREDICTOR</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Taal + Profiel sidebar
-with st.sidebar:
-    st.markdown("### ⚙️ Instellingen")
-    taal = st.selectbox("🌍 Taal / Language", ["Nederlands", "English"])
-    st.markdown("---")
-    st.markdown("### 👤 Jouw profiel")
-    profiel = st.selectbox("Wat voor creator ben jij?", [
-        "Algemeen", "⚽ Sport / Voetbal", "🏋️ Gym / Fitness",
-        "🍕 Food", "🎮 Gaming", "🎵 Muziek", "😂 Humor / Comedy",
-        "✨ Lifestyle / Vlog"
+# ===== WELKOMSTSCHERM =====
+if 'welkom_gezien' not in st.session_state:
+    st.session_state.welkom_gezien = False
+
+if not st.session_state.welkom_gezien:
+    st.markdown("""
+    <div style='background:#1e1e2e; border-radius:16px; padding:30px; margin:20px 0; border:1px solid #2e2e3e;'>
+        <h2 style='color:#fe2c55; margin-top:0;'>👋 Welkom bij ViralCheck AI!</h2>
+        <p style='color:#cccccc; font-size:16px;'>De slimste tool om jouw TikTok engagement te voorspellen en te verbeteren.</p>
+        <div style='display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin-top:20px;'>
+            <div style='background:#0f0f17; border-radius:12px; padding:16px; text-align:center;'>
+                <div style='font-size:32px;'>📝</div>
+                <div style='color:#ffffff; font-weight:bold; margin-top:8px;'>Caption Check</div>
+                <div style='color:#888888; font-size:13px; margin-top:4px;'>Vul je caption in en zie direct je engagement score</div>
+            </div>
+            <div style='background:#0f0f17; border-radius:12px; padding:16px; text-align:center;'>
+                <div style='font-size:32px;'>🎬</div>
+                <div style='color:#ffffff; font-weight:bold; margin-top:8px;'>Video Analyse</div>
+                <div style='color:#888888; font-size:13px; margin-top:4px;'>Upload je video en laat AI een perfecte caption bedenken</div>
+            </div>
+            <div style='background:#0f0f17; border-radius:12px; padding:16px; text-align:center;'>
+                <div style='font-size:32px;'>⚔️</div>
+                <div style='color:#ffffff; font-weight:bold; margin-top:8px;'>Vergelijker</div>
+                <div style='color:#888888; font-size:13px; margin-top:4px;'>Test twee captions tegen elkaar en kies de winnaar</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("🚀 Aan de slag!"):
+        st.session_state.welkom_gezien = True
+        st.rerun()
+else:
+    # ===== SIDEBAR =====
+    with st.sidebar:
+        st.markdown("### ⚙️ Instellingen")
+        taal = st.selectbox("🌍 Taal / Language", ["Nederlands", "English"])
+        st.markdown("---")
+        st.markdown("### 👤 Jouw profiel")
+        profiel = st.selectbox("Wat voor creator ben jij?", [
+            "Algemeen", "⚽ Sport / Voetbal", "🏋️ Gym / Fitness",
+            "🍕 Food", "🎮 Gaming", "🎵 Muziek", "😂 Humor / Comedy",
+            "✨ Lifestyle / Vlog"
+        ])
+        st.markdown("---")
+        st.markdown("### 📈 Trending in jouw niche")
+        if st.button("🔍 Bekijk trends"):
+            with st.spinner("AI zoekt trends..."):
+                categorie = profiel.split(" ")[-1] if profiel != "Algemeen" else "general"
+                trends = get_trends(categorie, taal)
+                for regel in trends.split('\n'):
+                    if regel.startswith("TREND"):
+                        inhoud = regel.split(":", 1)[-1].strip()
+                        st.markdown(f"🔥 {inhoud}")
+
+    # ===== TABS =====
+    tab1, tab2, tab3 = st.tabs([
+        "📝 Caption invoeren" if taal == "Nederlands" else "📝 Caption",
+        "🎬 Video uploaden" if taal == "Nederlands" else "🎬 Video upload",
+        "⚔️ Caption vergelijker" if taal == "Nederlands" else "⚔️ Compare captions"
     ])
-    st.markdown("---")
-    st.markdown("### 📈 Trending in jouw niche")
-    if st.button("🔍 Bekijk trends"):
-        with st.spinner("AI zoekt trends..."):
-            categorie = profiel.split(" ")[-1] if profiel != "Algemeen" else "general"
-            trends = get_trends(categorie, taal)
-            for regel in trends.split('\n'):
-                if regel.startswith("TREND"):
-                    inhoud = regel.split(":", 1)[-1].strip()
-                    st.markdown(f"🔥 {inhoud}")
 
-tab1, tab2, tab3 = st.tabs(["📝 Caption" if taal == "English" else "📝 Caption invoeren",
-                              "🎬 Video",
-                              "⚔️ Vergelijker" if taal == "Nederlands" else "⚔️ Compare"])
+    with tab1:
+        caption = st.text_input("📝 Jouw caption" if taal == "Nederlands" else "📝 Your caption",
+                                placeholder="Bijv: Morning routine check ☀️")
+        hashtags = st.text_input("# Hashtags", placeholder="#lifestyle #viral #morning")
 
-with tab1:
-    label_caption = "Your caption" if taal == "English" else "Jouw caption"
-    label_hashtags = "Hashtags" if taal == "English" else "Hashtags"
-    caption = st.text_input(f"📝 {label_caption}", placeholder="Bijv: Morning routine check ☀️")
-    hashtags = st.text_input(f"# {label_hashtags}", placeholder="#lifestyle #viral #morning")
-
-    if st.button("🔍 Voorspel" if taal == "Nederlands" else "🔍 Predict", key="btn1"):
-        if caption == "" and hashtags == "":
-            st.warning("Vul eerst een caption in!" if taal == "Nederlands" else "Please fill in a caption first!")
-        else:
-            pred, kansen, klassen = voorspel(caption, hashtags)
-            toon_resultaat(pred, kansen, klassen, caption, hashtags, taal=taal)
-
-with tab2:
-    st.write("Upload je video en beschrijf wat erin gebeurt." if taal == "Nederlands" else "Upload your video and describe what's in it.")
-    video_file = st.file_uploader("🎬 Upload video", type=['mp4', 'mov', 'avi'])
-    beschrijving = st.text_input("📝 Beschrijving" if taal == "Nederlands" else "📝 Description",
-                                  placeholder="Bijv: Denzel Dumfries transfer naar Real Madrid, grappige video")
-
-    if video_file:
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
-            tmp.write(video_file.read())
-            tmp_path = tmp.name
-        cap = cv2.VideoCapture(tmp_path)
-        ret, frame = cap.read()
-        cap.release()
-        os.unlink(tmp_path)
-        if ret:
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            st.image(frame_rgb, caption="📸 Screenshot", width=400)
-
-    if video_file and beschrijving:
-        btn_label = "🤖 Genereer captions & voorspel" if taal == "Nederlands" else "🤖 Generate captions & predict"
-        if st.button(btn_label, key="btn2"):
-            with st.spinner("AI bedenkt 3 caption variaties..." if taal == "Nederlands" else "AI is generating 3 caption variations..."):
-                try:
-                    variaties = genereer_caption_variaties(beschrijving, taal)
-
-                    st.subheader("✨ 3 Caption variaties:")
-                    beste_score = 0
-                    beste_idx = 0
-                    scores = []
-                    for i, (stijl, cap_tekst, hash_tekst) in enumerate(variaties):
-                        pred, kansen, klassen = voorspel(cap_tekst, hash_tekst)
-                        score = bereken_score(pred, kansen, klassen)
-                        scores.append((pred, kansen, klassen, score))
-                        if score > beste_score:
-                            beste_score = score
-                            beste_idx = i
-
-                    for i, (stijl, cap_tekst, hash_tekst) in enumerate(variaties):
-                        pred, kansen, klassen, score = scores[i]
-                        winnaar = " 🏆 Beste!" if i == beste_idx else ""
-                        with st.expander(f"{stijl}{winnaar} — Score: {score}/100"):
-                            st.success(f"**Caption:** {cap_tekst}")
-                            st.info(f"**Hashtags:** {hash_tekst}")
-                            toon_score_balk(score)
-
-                    best_stijl, best_cap, best_hash = variaties[beste_idx]
-                    best_pred = scores[beste_idx][0]
-
-                    st.divider()
-                    st.subheader("🎬 Video analyse")
-                    with st.spinner("AI analyseert..."):
-                        analyse = analyseer_video(beschrijving, best_pred, taal)
-                        for regel in analyse.split('\n'):
-                            if regel.startswith("WAAROM:"):
-                                st.info(f"**📊 Waarom:** {regel.replace('WAAROM:', '').strip()}")
-                            elif regel.startswith("STERK:"):
-                                st.success(f"**💪 Sterk:** {regel.replace('STERK:', '').strip()}")
-                            elif regel.startswith("VERBETER:"):
-                                st.warning(f"**🔧 Verbeter:** {regel.replace('VERBETER:', '').strip()}")
-                            elif regel.startswith("ALTERNATIEF:"):
-                                st.info(f"**💡 Probeer dit:** {regel.replace('ALTERNATIEF:', '').strip()}")
-
-                    tijden = get_posting_tijden(beschrijving)
-                    with st.expander("⏰ Beste posting tijden"):
-                        st.write(f"💡 {tijden['uitleg']}")
-                        cols = st.columns(3)
-                        for i, tijd in enumerate(tijden['beste']):
-                            cols[i].metric("Beste tijd", tijd)
-
-                except Exception as e:
-                    st.error(f"Er ging iets mis: {e}")
-
-with tab3:
-    st.write("Test twee captions tegen elkaar!" if taal == "Nederlands" else "Test two captions against each other!")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.subheader("Caption A")
-        caption_a = st.text_input("📝 Caption A", placeholder="Deze goal is van een andere wereld ⚽🔥", key="ca")
-        hashtags_a = st.text_input("# Hashtags A", placeholder="#voetbal #viral #fyp", key="ha")
-
-    with col2:
-        st.subheader("Caption B")
-        caption_b = st.text_input("📝 Caption B", placeholder="POV: je scoort in de laatste minuut 😱", key="cb")
-        hashtags_b = st.text_input("# Hashtags B", placeholder="#football #goals #trending", key="hb")
-
-    btn_label3 = "⚔️ Vergelijk" if taal == "Nederlands" else "⚔️ Compare"
-    if st.button(btn_label3, key="btn3"):
-        if caption_a and caption_b:
-            v_a, k_a, kl_a = voorspel(caption_a, hashtags_a)
-            v_b, k_b, kl_b = voorspel(caption_b, hashtags_b)
-            score_a = bereken_score(v_a, k_a, kl_a)
-            score_b = bereken_score(v_b, k_b, kl_b)
-
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("Resultaat A")
-                toon_score_balk(score_a)
-                toon_resultaat(v_a, k_a, kl_a, caption_a, hashtags_a, toon_uitleg=False, taal=taal)
-            with col2:
-                st.subheader("Resultaat B")
-                toon_score_balk(score_b)
-                toon_resultaat(v_b, k_b, kl_b, caption_b, hashtags_b, toon_uitleg=False, taal=taal)
-
-            st.divider()
-            if score_a > score_b:
-                st.success(f"🏆 Caption A wint! ({score_a} vs {score_b})")
-            elif score_b > score_a:
-                st.success(f"🏆 Caption B wint! ({score_b} vs {score_a})")
+        if st.button("🔍 Voorspel engagement" if taal == "Nederlands" else "🔍 Predict engagement", key="btn1"):
+            if caption == "" and hashtags == "":
+                st.warning("Vul eerst een caption in!" if taal == "Nederlands" else "Please fill in a caption first!")
             else:
-                st.info("🤝 Gelijkspel!")
-        else:
-            st.warning("Vul beide captions in!" if taal == "Nederlands" else "Fill in both captions!")
+                pred, kansen, klassen = voorspel(caption, hashtags)
+                toon_resultaat(pred, kansen, klassen, caption, hashtags, taal=taal)
+
+    with tab2:
+        st.write("Upload je video en beschrijf wat erin gebeurt." if taal == "Nederlands" else "Upload your video and describe what's in it.")
+        video_file = st.file_uploader("🎬 Upload video", type=['mp4', 'mov', 'avi'])
+        beschrijving = st.text_input(
+            "📝 Beschrijf je video" if taal == "Nederlands" else "📝 Describe your video",
+            placeholder="Bijv: Denzel Dumfries transfer naar Real Madrid, grappige video van slecht naar goed")
+
+        if video_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp4') as tmp:
+                tmp.write(video_file.read())
+                tmp_path = tmp.name
+            cap = cv2.VideoCapture(tmp_path)
+            ret, frame = cap.read()
+            cap.release()
+            os.unlink(tmp_path)
+            if ret:
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                st.image(frame_rgb, caption="📸 Screenshot", width=400)
+
+        if video_file and beschrijving:
+            btn_label = "🤖 Genereer captions & voorspel" if taal == "Nederlands" else "🤖 Generate captions & predict"
+            if st.button(btn_label, key="btn2"):
+                with st.spinner("AI bedenkt 3 caption variaties..." if taal == "Nederlands" else "AI is generating 3 caption variations..."):
+                    try:
+                        variaties = genereer_caption_variaties(beschrijving, taal)
+
+                        st.subheader("✨ 3 Caption variaties:")
+                        beste_score = 0
+                        beste_idx = 0
+                        scores = []
+                        for i, (stijl, cap_tekst, hash_tekst) in enumerate(variaties):
+                            pred, kansen, klassen = voorspel(cap_tekst, hash_tekst)
+                            score = bereken_score(pred, kansen, klassen)
+                            scores.append((pred, kansen, klassen, score))
+                            if score > beste_score:
+                                beste_score = score
+                                beste_idx = i
+
+                        for i, (stijl, cap_tekst, hash_tekst) in enumerate(variaties):
+                            pred, kansen, klassen, score = scores[i]
+                            winnaar = " 🏆 Beste!" if i == beste_idx else ""
+                            with st.expander(f"{stijl}{winnaar} — Score: {score}/100"):
+                                st.success(f"**Caption:** {cap_tekst}")
+                                st.info(f"**Hashtags:** {hash_tekst}")
+                                toon_score_balk(score)
+
+                        best_stijl, best_cap, best_hash = variaties[beste_idx]
+                        best_pred = scores[beste_idx][0]
+
+                        st.divider()
+                        st.subheader("🎬 Video analyse")
+                        with st.spinner("AI analyseert..."):
+                            analyse = analyseer_video(beschrijving, best_pred, taal)
+                            for regel in analyse.split('\n'):
+                                if regel.startswith("WAAROM:"):
+                                    st.info(f"**📊 Waarom:** {regel.replace('WAAROM:', '').strip()}")
+                                elif regel.startswith("STERK:"):
+                                    st.success(f"**💪 Sterk:** {regel.replace('STERK:', '').strip()}")
+                                elif regel.startswith("VERBETER:"):
+                                    st.warning(f"**🔧 Verbeter:** {regel.replace('VERBETER:', '').strip()}")
+                                elif regel.startswith("ALTERNATIEF:"):
+                                    st.info(f"**💡 Probeer dit:** {regel.replace('ALTERNATIEF:', '').strip()}")
+
+                        tijden = get_posting_tijden(beschrijving)
+                        with st.expander("⏰ Beste posting tijden"):
+                            st.write(f"💡 {tijden['uitleg']}")
+                            cols = st.columns(3)
+                            for i, tijd in enumerate(tijden['beste']):
+                                cols[i].metric("Beste tijd", tijd)
+
+                    except Exception as e:
+                        st.error(f"Er ging iets mis: {e}")
+
+    with tab3:
+        st.write("Test twee captions tegen elkaar!" if taal == "Nederlands" else "Test two captions against each other!")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.subheader("Caption A")
+            caption_a = st.text_input("📝 Caption A", placeholder="Deze goal is van een andere wereld ⚽🔥", key="ca")
+            hashtags_a = st.text_input("# Hashtags A", placeholder="#voetbal #viral #fyp", key="ha")
+
+        with col2:
+            st.subheader("Caption B")
+            caption_b = st.text_input("📝 Caption B", placeholder="POV: je scoort in de laatste minuut 😱", key="cb")
+            hashtags_b = st.text_input("# Hashtags B", placeholder="#football #goals #trending", key="hb")
+
+        btn_label3 = "⚔️ Vergelijk" if taal == "Nederlands" else "⚔️ Compare"
+        if st.button(btn_label3, key="btn3"):
+            if caption_a and caption_b:
+                v_a, k_a, kl_a = voorspel(caption_a, hashtags_a)
+                v_b, k_b, kl_b = voorspel(caption_b, hashtags_b)
+                score_a = bereken_score(v_a, k_a, kl_a)
+                score_b = bereken_score(v_b, k_b, kl_b)
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.subheader("Resultaat A")
+                    toon_score_balk(score_a)
+                    toon_resultaat(v_a, k_a, kl_a, caption_a, hashtags_a, toon_uitleg=False, taal=taal)
+                with col2:
+                    st.subheader("Resultaat B")
+                    toon_score_balk(score_b)
+                    toon_resultaat(v_b, k_b, kl_b, caption_b, hashtags_b, toon_uitleg=False, taal=taal)
+
+                st.divider()
+                if score_a > score_b:
+                    st.success(f"🏆 Caption A wint! ({score_a} vs {score_b})")
+                elif score_b > score_a:
+                    st.success(f"🏆 Caption B wint! ({score_b} vs {score_a})")
+                else:
+                    st.info("🤝 Gelijkspel!")
+            else:
+                st.warning("Vul beide captions in!" if taal == "Nederlands" else "Fill in both captions!")
