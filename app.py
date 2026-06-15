@@ -274,6 +274,28 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# ===== SIDEBAR (altijd zichtbaar) =====
+with st.sidebar:
+    st.markdown("### ⚙️ Instellingen")
+    taal = st.selectbox("🌍 Taal / Language", ["Nederlands", "English"])
+    st.markdown("---")
+    st.markdown("### 👤 Jouw profiel")
+    profiel = st.selectbox("Wat voor creator ben jij?", [
+        "Algemeen", "⚽ Sport / Voetbal", "🏋️ Gym / Fitness",
+        "🍕 Food", "🎮 Gaming", "🎵 Muziek", "😂 Humor / Comedy",
+        "✨ Lifestyle / Vlog"
+    ])
+    st.markdown("---")
+    st.markdown("### 📈 Trending in jouw niche")
+    if st.button("🔍 Bekijk trends"):
+        with st.spinner("AI zoekt trends..."):
+            categorie = profiel.split(" ")[-1] if profiel != "Algemeen" else "general"
+            trends = get_trends(categorie, taal)
+            for regel in trends.split('\n'):
+                if regel.startswith("TREND"):
+                    inhoud = regel.split(":", 1)[-1].strip()
+                    st.markdown(f"🔥 {inhoud}")
+
 # ===== WELKOMSTSCHERM =====
 if 'welkom_gezien' not in st.session_state:
     st.session_state.welkom_gezien = False
@@ -306,28 +328,6 @@ if not st.session_state.welkom_gezien:
         st.session_state.welkom_gezien = True
         st.rerun()
 else:
-    # ===== SIDEBAR =====
-    with st.sidebar:
-        st.markdown("### ⚙️ Instellingen")
-        taal = st.selectbox("🌍 Taal / Language", ["Nederlands", "English"])
-        st.markdown("---")
-        st.markdown("### 👤 Jouw profiel")
-        profiel = st.selectbox("Wat voor creator ben jij?", [
-            "Algemeen", "⚽ Sport / Voetbal", "🏋️ Gym / Fitness",
-            "🍕 Food", "🎮 Gaming", "🎵 Muziek", "😂 Humor / Comedy",
-            "✨ Lifestyle / Vlog"
-        ])
-        st.markdown("---")
-        st.markdown("### 📈 Trending in jouw niche")
-        if st.button("🔍 Bekijk trends"):
-            with st.spinner("AI zoekt trends..."):
-                categorie = profiel.split(" ")[-1] if profiel != "Algemeen" else "general"
-                trends = get_trends(categorie, taal)
-                for regel in trends.split('\n'):
-                    if regel.startswith("TREND"):
-                        inhoud = regel.split(":", 1)[-1].strip()
-                        st.markdown(f"🔥 {inhoud}")
-
     # ===== TABS =====
     tab1, tab2, tab3 = st.tabs([
         "📝 Caption invoeren" if taal == "Nederlands" else "📝 Caption",
@@ -373,6 +373,7 @@ else:
                     try:
                         variaties = genereer_caption_variaties(beschrijving, taal)
 
+                        st.info("🤖 **AI Transparantie:** De onderstaande captions zijn gegenereerd door kunstmatige intelligentie (Groq LLaMA). Controleer altijd of de inhoud klopt met jouw video en pas aan waar nodig voordat je post.")
                         st.subheader("✨ 3 Caption variaties:")
                         beste_score = 0
                         beste_idx = 0
